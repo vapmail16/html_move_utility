@@ -1,0 +1,95 @@
+{
+  "paths": {
+    "sourceRoot": "\\\\SRV-NOTIF-01\\Notifications$",
+    "targetRoot": "\\\\SRV-NOTIF-02\\Notifications$",
+    "workDir": "\\\\SRV-MIGADM-01\\Migration$\\notifications-2026",
+    "storeDir": "store",
+    "reportDir": "reports",
+    "logDir": "logs",
+    "useLongPathPrefix": true
+  },
+  "pipeline": {
+    "stages": ["Inventory", "Batching", "Copy", "Verify", "Reconcile", "HtmlChecks", "Report"],
+    "gates": ["Inventory", "Batching", "Copy", "Verify", "Reconcile", "HtmlChecks"],
+    "makerCheckerDistinctUsers": true
+  },
+  "inventory": {
+    "mode": "unc",
+    "threads": 8,
+    "chunkSize": 500,
+    "hash": { "algorithm": "SHA256", "bufferSizeKB": 1024 },
+    "aclReader": "windows",
+    "includeDirectories": true,
+    "excludePatterns": ["(^|\\\\)Thumbs\\.db$", "(^|\\\\)~\\$[^\\\\]*$"],
+    "skipUnchanged": true
+  },
+  "batching": {
+    "strategy": "regex",
+    "options": {
+      "pattern": "^(?<y>\\d{4})[\\\\/](?<m>\\d{2})",
+      "template": "{y}-{m}",
+      "unmatchedBatchId": "UNBATCHED"
+    }
+  },
+  "copy": {
+    "engine": "robocopy",
+    "maxRetries": 3,
+    "robocopy": {
+      "executable": "robocopy.exe",
+      "flags": ["/COPY:DATSO", "/DCOPY:T", "/R:3", "/W:5", "/NP", "/FP", "/BYTES", "/TS", "/UNICODE"],
+      "threads": 16,
+      "successExitCodeMax": 7
+    },
+    "forbiddenFlags": ["/MOV", "/MOVE", "/MIR", "/PURGE", "/CREATE"]
+  },
+  "reconcile": {
+    "autoRetry": true
+  },
+  "throttle": {
+    "enabled": true,
+    "timeZone": "Local",
+    "windows": [
+      { "days": ["Mon", "Tue", "Wed", "Thu", "Fri"], "from": "08:00", "to": "18:00", "threads": 4, "ipgMs": 50 },
+      { "days": ["Sat", "Sun"], "from": "02:00", "to": "04:00", "threads": 2, "ipgMs": 100 }
+    ]
+  },
+  "compare": {
+    "fileFields": ["exists", "size", "hash", "created", "modified", "attributes", "acl"],
+    "dirFields": ["exists", "modified"],
+    "timestampToleranceSec": 0,
+    "ignoreAttributes": [],
+    "acl": {
+      "mode": "sid",
+      "sidMapFile": null
+    }
+  },
+  "delta": {
+    "detectBy": ["size", "modified"],
+    "rehashChanged": true
+  },
+  "htmlChecks": {
+    "fileExtensions": [".htm", ".html"],
+    "requireSourceTargetParity": true,
+    "rules": {
+      "longPath":      { "enabled": true, "maxLength": 260 },
+      "fileName":      { "enabled": true, "flagNonAscii": true, "flagTrailingDotSpace": true, "flagCaseDuplicates": true, "invalidChars": "<>:\"|?*" },
+      "linkedAssets":  { "enabled": true, "attributes": ["src", "href"], "ignoreSchemes": ["http", "https", "mailto", "javascript", "data", "tel", "#"] },
+      "absoluteLinks": {
+        "enabled": true,
+        "oldHosts": ["SRV-NOTIF-01", "srv-notif-01.corp.example.com"],
+        "oldUncPrefixes": ["\\\\SRV-NOTIF-01\\Notifications$", "\\\\srv-notif-01.corp.example.com\\Notifications$"],
+        "oldIpAddresses": ["10.20.30.41"]
+      },
+      "zeroByte":      { "enabled": true },
+      "malformed":     { "enabled": true, "requireTags": ["html"], "maxBytesToParse": 10485760 },
+      "renderSample":  { "enabled": true, "rate": 0.001, "minPerBatch": 1, "seed": 20260923, "renderer": "parse", "edgePath": null, "timeoutSec": 30 }
+    }
+  },
+  "report": {
+    "formats": ["csv", "html"]
+  },
+  "audit": {
+    "hashChain": true,
+    "hashAlgorithm": "SHA256"
+  }
+}

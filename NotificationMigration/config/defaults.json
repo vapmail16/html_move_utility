@@ -1,0 +1,107 @@
+{
+  "paths": {
+    "sourceRoot": null,
+    "targetRoot": null,
+    "workDir": null,
+    "storeDir": "store",
+    "reportDir": "reports",
+    "logDir": "logs",
+    "useLongPathPrefix": true
+  },
+  "pipeline": {
+    "stages": ["Inventory", "Batching", "Copy", "Verify", "Reconcile", "HtmlChecks", "Report"],
+    "gates": ["Inventory", "Delta", "Batching", "Copy", "Verify", "Reconcile", "HtmlChecks"],
+    "makerCheckerDistinctUsers": true,
+    "requireSuccessToApprove": true,
+    "dryRunStages": ["Inventory", "Batching", "Report"]
+  },
+  "freeze": {
+    "allowedWriters": ["NT AUTHORITY\\SYSTEM", "BUILTIN\\Administrators", "CREATOR OWNER"]
+  },
+  "inventory": {
+    "threads": 8,
+    "chunkSize": 500,
+    "manifestCacheRecords": 2000000,
+    "detectBy": ["size", "modified"],
+    "hash": { "algorithm": "SHA256", "bufferSizeKB": 64 },
+    "aclReader": "windows",
+    "includeDirectories": true,
+    "excludePatterns": [],
+    "skipUnchanged": true
+  },
+  "batching": {
+    "strategy": "regex",
+    "options": {
+      "pattern": "^(?<y>\\d{4})[\\\\/](?<m>\\d{2})",
+      "template": "{y}-{m}",
+      "unmatchedBatchId": "UNBATCHED"
+    }
+  },
+  "copy": {
+    "engine": "robocopy",
+    "maxRetries": 3,
+    "chunkSize": 5000,
+    "splitFolderFactor": 10,
+    "robocopy": {
+      "executable": "robocopy.exe",
+      "flags": ["/COPY:DATSO", "/DCOPY:T", "/R:3", "/W:5", "/NP", "/FP", "/BYTES", "/TS", "/UNICODE"],
+      "threads": 16,
+      "successExitCodeMax": 7,
+      "maxCommandLineChars": 8000,
+      "allowedFlags": ["/COPY", "/COPYALL", "/DCOPY", "/R", "/W", "/NP", "/FP", "/BYTES", "/TS", "/UNICODE", "/NFL", "/NDL", "/NJH", "/NJS", "/V", "/X", "/XJ", "/XJD", "/XJF", "/SL", "/SJ", "/B", "/ZB", "/Z", "/J", "/EFSRAW", "/NOOFFLOAD", "/COMPRESS", "/TEE", "/ETA"]
+    },
+    "forbiddenFlags": ["/MOV", "/MOVE", "/MIR", "/PURGE", "/CREATE"]
+  },
+  "reconcile": {
+    "autoRetry": true,
+    "compactStore": true
+  },
+  "throttle": {
+    "enabled": false,
+    "timeZone": "Local",
+    "windows": [
+      { "days": ["Mon", "Tue", "Wed", "Thu", "Fri"], "from": "08:00", "to": "18:00", "threads": 4, "ipgMs": 50 }
+    ]
+  },
+  "compare": {
+    "fileFields": ["exists", "size", "hash", "created", "modified", "attributes", "acl"],
+    "dirFields": ["exists", "modified"],
+    "timestampToleranceSec": 0,
+    "ignoreAttributes": [],
+    "acl": {
+      "mode": "sid",
+      "sidMapFile": null,
+      "includeOwner": true
+    }
+  },
+  "delta": {
+    "detectBy": ["size", "modified"]
+  },
+  "htmlChecks": {
+    "fileExtensions": [".htm", ".html"],
+    "requireSourceTargetParity": true,
+    "chunkSize": 5000,
+    "rules": {
+      "longPath":      { "enabled": true, "maxLength": 260 },
+      "fileName":      { "enabled": true, "flagNonAscii": true, "flagTrailingDotSpace": true, "flagLeadingSpace": true, "flagControlChars": true, "flagCaseDuplicates": true,
+                         "invalidChars": "<>:\"|?*", "specialChars": "&#%;{}~$!'@+=,[]^`",
+                         "reservedNames": ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"] },
+      "linkedAssets":  { "enabled": true, "attributes": ["src", "href", "background", "poster"], "parseCssUrls": true, "parseSrcset": true, "maxBytesToParse": null,
+                         "ignoreSchemes": ["http", "https", "mailto", "javascript", "data", "tel", "#"] },
+      "absoluteLinks": { "enabled": true, "oldHosts": [], "oldUncPrefixes": [], "oldIpAddresses": [], "maxBytesToParse": null },
+      "zeroByte":      { "enabled": true },
+      "malformed":     { "enabled": true, "requireTags": ["html"], "maxBytesToParse": 10485760 },
+      "renderSample":  { "enabled": true, "rate": 0.001, "minPerBatch": 1, "seed": 42, "renderer": "parse", "strictRenderer": false, "edgePath": null, "timeoutSec": 30 }
+    }
+  },
+  "report": {
+    "formats": ["csv", "html"],
+    "htmlMaxRows": 2000,
+    "finalIncludeDetails": false,
+    "finalTargetSweep": true
+  },
+  "audit": {
+    "hashChain": true,
+    "hashAlgorithm": "SHA256"
+  }
+}

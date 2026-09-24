@@ -1,0 +1,42 @@
+{
+  "paths": {
+    "sourceRoot": "./.dev/source",
+    "targetRoot": "./.dev/target",
+    "workDir": "./.dev/work",
+    "storeDir": "store",
+    "reportDir": "reports",
+    "logDir": "logs",
+    "useLongPathPrefix": true
+  },
+  "pipeline": {
+    "makerCheckerDistinctUsers": false
+  },
+  "inventory": {
+    "mode": "local",
+    "threads": 4,
+    "chunkSize": 50,
+    "aclReader": "none"
+  },
+  "copy": {
+    "engine": "dotnet",
+    "maxRetries": 2
+  },
+  "throttle": {
+    "enabled": false
+  },
+  "compare": {
+    "fileFields": ["exists", "size", "hash", "created", "modified", "attributes"],
+    "dirFields": ["exists"],
+    "timestampToleranceSec": 0,
+    "acl": { "mode": "sid", "sidMapFile": null }
+  },
+  "htmlChecks": {
+    "rules": {
+      "absoluteLinks": { "enabled": true, "oldHosts": ["OLDSERVER01"], "oldUncPrefixes": ["\\\\OLDSERVER01\\notifications"], "oldIpAddresses": [] },
+      "renderSample":  { "enabled": true, "rate": 0.05, "minPerBatch": 1, "seed": 42, "renderer": "parse" }
+    }
+  },
+  "report": {
+    "formats": ["csv", "html", "json"]
+  }
+}

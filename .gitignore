@@ -1,0 +1,14 @@
+# Local dev/test data and migration output (never commit migration evidence or real paths)
+.dev/
+work/
+store/
+reports/
+logs/
+*.lock
+migration.config.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
